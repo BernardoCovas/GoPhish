@@ -31,14 +31,11 @@ with open(FILENAME) as f:
                         f.write(chunk)
 
                 if "https://m.facebook.com/login/" in web:
-                    filepath = "post/"
+                    filepath = "login/"
                  
                 line = line.replace(web, f"/{filepath}")
                 print(web)
                 print(filepath)
                 print(line)
-
-                if c > 5:
-                    pass
 
             of.write(line)
