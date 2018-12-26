@@ -20,48 +20,18 @@ type Website struct {
 	WebsiteName string
 	WebLink     string
 	LoginURL    string
+	ShouldStop  func(user string, pass string) bool
+	IsValid     func(user string, pass string) bool
 
 	ResHandleMatch string
 	ResFolder      string
 	IndexFile      string
 	IndexFileRaw   string
+	InvalidFile    string
+	InvalidFileRaw string
 
 	LineMatchRe string
 	ResMatchRe  string
-}
-
-// WebsiteMap maps folder names to builder functions.
-// Call the resulting function to generate the sanitized
-// index.html.
-var WebsiteMap = map[string]Website{
-
-	clipUnlPtFolder: Website{
-
-		WebsiteName: "clip.unl.pt",
-		WebLink:     "https://clip.unl.pt",
-		LoginURL:    "https://clip.fct.unl.pt/utente/eu",
-
-		ResHandleMatch: "/clip.unl.pt/__res__/",
-		ResFolder:      "./clip.unl.pt/__res__/",
-		IndexFile:      "./clip.unl.pt/index.html",
-		IndexFileRaw:   "./clip.unl.pt/index.raw.html",
-
-		LineMatchRe: `(<link|<img|<script)`,
-		ResMatchRe:  `(href=".*?"|src=".*?")`,
-	},
-	facebookComFolder: Website{
-
-		WebsiteName: "facebook.com",
-		WebLink:     "http://m.facebok.com",
-
-		ResHandleMatch: "/facebok.com/__res__/",
-		ResFolder:      "./facebok.com/__res__/",
-		IndexFile:      "./facebok.com/index.html",
-		IndexFileRaw:   "./facebok.com/index.raw.html",
-
-		LineMatchRe: `(<link|<img|<script)`,
-		ResMatchRe:  `(href=".*?"|src=".*?")`,
-	},
 }
 
 // Build gathers the resources of index.raw.html and creates a new servable index.html
@@ -69,64 +39,70 @@ func (web Website) Build() {
 
 	rescounter := 0
 
-	filein, errin := os.Open(web.IndexFileRaw)
-	fileout, errout := os.Create(web.IndexFile)
+	inFiles := []string{web.IndexFileRaw, web.InvalidFileRaw}
+	outFiles := []string{web.IndexFile, web.InvalidFile}
 
-	defer filein.Close()
-	defer fileout.Close()
+	for i := 0; i < 2; i++ {
 
-	if errin != nil {
-		log.Fatal(errin)
-	}
-	if errout != nil {
-		log.Fatal(errout)
-	}
+		filein, errin := os.Open(inFiles[i])
+		fileout, errout := os.Create(outFiles[i])
 
-	lineRe := regexp.MustCompile(web.LineMatchRe)
-	srcRe := regexp.MustCompile(web.ResMatchRe)
+		defer filein.Close()
+		defer fileout.Close()
 
-	scanner := bufio.NewScanner(filein)
-	for scanner.Scan() {
-		line := scanner.Text()
-		rescounter++
-
-		if lineRe.MatchString(line) {
-
-			src := srcRe.FindStringSubmatch(line)
-
-			if len(src) > 0 {
-
-				link := strings.Split(src[0], `"`)[1]
-				_ext := strings.Split(link, `.`)
-				ext := _ext[len(_ext)-1]
-
-				respath := path.Join(web.ResFolder, fmt.Sprintf("%d.%s", rescounter, ext))
-				rawlink := link
-
-				if !strings.Contains(link, "http://") && !strings.Contains(link, "http://") {
-					rawlink = web.WebLink + "/" + link
-				}
-
-				log.Printf("Downloading: %s", rawlink)
-
-				err := DownloadFile(respath, rawlink)
-				if err != nil {
-					println(err)
-					log.Fatal(err)
-				}
-
-				line = strings.Replace(line, link, "/"+respath, -1)
-				println(line)
-			}
+		if errin != nil {
+			log.Fatal(errin)
+		}
+		if errout != nil {
+			log.Fatal(errout)
 		}
 
-		fmt.Fprintln(fileout, line)
-	}
+		lineRe := regexp.MustCompile(web.LineMatchRe)
+		srcRe := regexp.MustCompile(web.ResMatchRe)
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+		scanner := bufio.NewScanner(filein)
+		for scanner.Scan() {
+			line := scanner.Text()
+			rescounter++
 
+			if lineRe.MatchString(line) {
+
+				src := srcRe.FindStringSubmatch(line)
+
+				if len(src) > 0 {
+
+					link := strings.Split(src[0], `"`)[1]
+					_ext := strings.Split(link, `.`)
+					ext := _ext[len(_ext)-1]
+
+					respath := path.Join(web.ResFolder, fmt.Sprintf("%d.%s", rescounter, ext))
+					rawlink := link
+
+					if !strings.Contains(link, "http://") && !strings.Contains(link, "http://") {
+						rawlink = web.WebLink + "/" + link
+					}
+
+					log.Printf("Downloading: %s", rawlink)
+
+					err := DownloadFile(respath, rawlink)
+					if err != nil {
+						println(err)
+						log.Fatal(err)
+					}
+
+					line = strings.Replace(line, link, "/"+respath, -1)
+					println(line)
+				}
+			}
+
+			fmt.Fprintln(fileout, line)
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+	}
 }
 
 // DownloadFile will download a url to a local file.
