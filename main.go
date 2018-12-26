@@ -33,6 +33,11 @@ func main() {
 		log.Fatal("Not a valid website. Expecting: " + strings.Join(keys, ", "))
 	}
 
+    if !*buildPtr && !*servePtr {
+        flag.PrintDefaults()
+        return
+    }
+
 	if *buildPtr {
 		website.Build()
 	}
