@@ -5,8 +5,8 @@ import (
 	"log"
 	"strings"
 
-	"./build"
-	"./serve"
+	"./include/build"
+	"./include/common"
 )
 
 const defaulPort = 8080
@@ -17,32 +17,31 @@ func main() {
 	webPtr := flag.String("web", "clip.unl.pt", "Website to be served.")
 	buildPtr := flag.Bool("build", false, "Build the website before serving.")
 	servePtr := flag.Bool("serve", false, "Wait for connections at the specified port.")
-	// logFilePtr := flag.String("logFile", defaultLogFile, "The file to write logs.")
 	portPtr := flag.Uint("port", defaulPort, "Port to serve on.")
 
 	flag.Parse()
-	website, ok := build.WebsiteMap[*webPtr]
+	website, ok := common.WebsiteMap[*webPtr]
 
 	if !ok {
 
 		keys := []string{}
-		for k := range build.WebsiteMap {
+		for k := range common.WebsiteMap {
 			keys = append(keys, k)
 		}
 
 		log.Fatal("Not a valid website. Expecting: " + strings.Join(keys, ", "))
 	}
 
-    if !*buildPtr && !*servePtr {
-        flag.PrintDefaults()
-        return
-    }
+	if !*buildPtr && !*servePtr {
+		flag.PrintDefaults()
+		return
+	}
 
 	if *buildPtr {
-		website.Build()
+		build.Build(website)
 	}
 
 	if *servePtr {
-		serve.Serve(website, *portPtr)
+		website.Serve(*portPtr)
 	}
 }
