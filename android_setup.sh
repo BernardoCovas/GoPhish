@@ -4,6 +4,9 @@
 # to setup iptables to redirect http/https requests to a custom
 # server. This is perceived by clients as a captive portal.
 
+# Avter the setup, starts ./main and turns off the hotspot
+# and wifi when it returns.
+
 su -c "sysctl net.ipv4.ip_forward=1 "
 su -c "sysctl -w net.ipv4.conf.wlan0.route_localnet=1"
 su -c "iptables \
@@ -12,3 +15,7 @@ su -c "iptables \
     -p tcp \
     --match multiport --dports 80,443 \
     -j DNAT --to-destination 127.0.0.1:8080"
+
+./main -serve
+su -c "svc wifi enable"
+su -c "svc wifi disable"
