@@ -10,42 +10,20 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"../common"
 )
 
-const clipUnlPtFolder = "clip.unl.pt"
-const facebookComFolder = "facebook.com"
-
-// Website is a struct with info on a website's folders and files.
-type Website struct {
-	WebsiteName string
-	WebLink     string
-	LoginURL    string
-	ShouldStop  func(user string, pass string) bool
-	IsValid     func(user string, pass string) bool
-
-	ResHandleMatch string
-	ResFolder      string
-	IndexFile      string
-	IndexFileRaw   string
-	InvalidFile    string
-	InvalidFileRaw string
-
-	LineMatchRe string
-	ResMatchRe  string
-}
-
 // Build gathers the resources of index.raw.html and creates a new servable index.html
-func (web Website) Build() {
+func Build(web *common.Website) {
 
 	rescounter := 0
 
-	inFiles := []string{web.IndexFileRaw, web.InvalidFileRaw}
-	outFiles := []string{web.IndexFile, web.InvalidFile}
+	for i := 0; i < len(web.RawFiles); i++ {
 
-	for i := 0; i < 2; i++ {
-
-		filein, errin := os.Open(inFiles[i])
-		fileout, errout := os.Create(outFiles[i])
+		filein, errin := os.Open(web.GetFile(web.RawFiles[i]))
+		fileout, errout := os.Create(web.GetFile(
+			strings.Replace(web.RawFiles[i], ".raw.", ".", 1)))
 
 		defer filein.Close()
 		defer fileout.Close()
@@ -75,7 +53,7 @@ func (web Website) Build() {
 					_ext := strings.Split(link, `.`)
 					ext := _ext[len(_ext)-1]
 
-					respath := path.Join(web.ResFolder, fmt.Sprintf("%d.%s", rescounter, ext))
+					respath := web.GetResource(fmt.Sprintf("%d.%s", rescounter, ext)) // path.Join(common.ResFolder, fmt.Sprintf("%d.%s", rescounter, ext))
 					rawlink := link
 
 					if !strings.Contains(link, "http://") && !strings.Contains(link, "http://") {
