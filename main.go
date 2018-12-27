@@ -20,7 +20,7 @@ func main() {
 	portPtr := flag.Uint("port", defaulPort, "Port to serve on.")
 
 	flag.Parse()
-	website, ok := common.WebsiteMap[*webPtr]
+	_website, ok := common.WebsiteMap[*webPtr]
 
 	if !ok {
 
@@ -32,6 +32,7 @@ func main() {
 		log.Fatal("Not a valid website. Expecting: " + strings.Join(keys, ", "))
 	}
 
+	website := _website()
 	if !*buildPtr && !*servePtr {
 		flag.PrintDefaults()
 		return
