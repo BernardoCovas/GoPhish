@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"strings"
 
@@ -17,6 +18,7 @@ func main() {
 	buildPtr := flag.Bool("build", false, "Build the website before serving.")
 	servePtr := flag.Bool("serve", false, "Wait for connections at the specified port.")
 	portPtr := flag.Uint("port", defaulPort, "Port to serve on.")
+	targetsPtr := flag.String("targets", "", "Filename of a text file containing one target username per line.")
 
 	flag.Parse()
 	_website, ok := gophish.WebsiteMap[*webPtr]
@@ -32,6 +34,23 @@ func main() {
 	}
 
 	website := _website()
+
+	if *targetsPtr != "" {
+
+		contents, err := ioutil.ReadFile(*targetsPtr)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		targets := strings.Split(string(contents), "\n")
+
+		for _, target := range targets {
+			log.Printf("Using target: %s", target)
+		}
+
+		website.Targets = targets
+	}
+
 	if !*buildPtr && !*servePtr {
 		flag.PrintDefaults()
 		return
