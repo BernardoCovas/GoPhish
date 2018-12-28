@@ -1,7 +1,7 @@
 .vscode
 
-__res__
-*.log
-*.swp
+targets.txt
 index.html
 invalid.html
+__res__
+*.log
