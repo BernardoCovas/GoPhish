@@ -1,4 +1,4 @@
-package build
+package gophish
 
 import (
 	"bufio"
@@ -10,12 +10,10 @@ import (
 	"path"
 	"regexp"
 	"strings"
-
-	"../common"
 )
 
 // Build gathers the resources of index.raw.html and creates a new servable index.html
-func Build(web *common.Website) {
+func Build(web *Website) {
 
 	rescounter := 0
 

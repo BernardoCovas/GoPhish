@@ -5,8 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"./include/build"
-	"./include/common"
+	gophish "./lib"
 )
 
 const defaulPort = 8080
@@ -20,12 +19,12 @@ func main() {
 	portPtr := flag.Uint("port", defaulPort, "Port to serve on.")
 
 	flag.Parse()
-	_website, ok := common.WebsiteMap[*webPtr]
+	_website, ok := gophish.WebsiteMap[*webPtr]
 
 	if !ok {
 
 		keys := []string{}
-		for k := range common.WebsiteMap {
+		for k := range gophish.WebsiteMap {
 			keys = append(keys, k)
 		}
 
@@ -39,7 +38,7 @@ func main() {
 	}
 
 	if *buildPtr {
-		build.Build(website)
+		gophish.Build(website)
 	}
 
 	if *servePtr {

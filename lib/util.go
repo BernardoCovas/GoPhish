@@ -1,4 +1,4 @@
-package common
+package gophish
 
 import (
 	"io/ioutil"
