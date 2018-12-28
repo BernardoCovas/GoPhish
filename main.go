@@ -42,13 +42,10 @@ func main() {
 			log.Fatal(err)
 		}
 
-		targets := strings.Split(string(contents), "\n")
-
-		for _, target := range targets {
-			log.Printf("Using target: %s", target)
-		}
-
+		targets := strings.Split(strings.Replace(string(contents), "\r", "", -1), "\n")
 		website.Targets = targets
+
+		log.Printf("Using targets: %s", strings.Join(targets, ", "))
 	}
 
 	if !*buildPtr && !*servePtr {
