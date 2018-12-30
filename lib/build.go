@@ -54,7 +54,7 @@ func Build(web *Website) {
 					respath := web.GetResource(fmt.Sprintf("%d.%s", rescounter, ext)) // path.Join(common.ResFolder, fmt.Sprintf("%d.%s", rescounter, ext))
 					rawlink := link
 
-					if !strings.Contains(link, "http://") && !strings.Contains(link, "http://") {
+					if !strings.Contains(link, "http://") && !strings.Contains(link, "https://") {
 						rawlink = web.WebLink + "/" + link
 					}
 
@@ -62,7 +62,6 @@ func Build(web *Website) {
 
 					err := DownloadFile(respath, rawlink)
 					if err != nil {
-						println(err)
 						log.Fatal(err)
 					}
 
